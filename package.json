@@ -1,0 +1,30 @@
+{
+  "name": "vue-user-frontend",
+  "version": "1.0.0",
+  "description": "Vue frontend for TikTok user management",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4",
+    "axios": "^1.4.0",
+    "element-plus": "^2.3.8",
+    "@element-plus/icons-vue": "^2.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.2.3",
+    "vite": "^4.4.0"
+  },
+  "keywords": [
+    "vue",
+    "frontend",
+    "user-management"
+  ],
+  "author": "Developer",
+  "license": "MIT"
+}
