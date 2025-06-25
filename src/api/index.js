@@ -42,17 +42,19 @@ api.interceptors.response.use(
 export const userAPI = {
   // Create user (register)
   createUser: (userData) => {
-    return api.post('/user/create', {
+    return api.post('/v1/user/create', {
       user_name: userData.userName,
       password: userData.password,
       email: userData.email,
       sex: userData.sex
     })
   },
+  // 其他 API 函数保持不变
+
 
   // Login user
   loginUser: (loginData) => {
-    return api.post('/user/login', {
+    return api.post('/v1/user/login', {
       user_name: loginData.userName,
       Password: loginData.password,
       Email: loginData.email
