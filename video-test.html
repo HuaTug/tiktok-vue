@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .video-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            height: auto;
+        }
+        .info {
+            padding: 15px;
+            background: #f5f5f5;
+        }
+        .test-urls {
+            margin: 20px 0;
+        }
+        .test-urls input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-urls button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-urls button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Player Test</h1>
+    
+    <div class="test-urls">
+        <h3>Test Video URLs</h3>
+        <input type="text" id="videoUrl" placeholder="Enter video URL to test" value="/api/v1/stream?path=videos/sample.mp4">
+        <button onclick="testVideo()">Test Video</button>
+        <button onclick="testAPI()">Test API</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="video-container">
+        <video id="testVideo" controls preload="metadata">
+            <source src="" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="info">
+            <p><strong>Current URL:</strong> <span id="currentUrl">None</span></p>
+            <p><strong>Status:</strong> <span id="videoStatus">Ready</span></p>
+        </div>
+    </div>
+
+    <div class="video-container">
+        <h3>Common Test URLs</h3>
+        <ul>
+            <li><a href="#" onclick="loadVideo('/api/v1/stream?path=videos/sample.mp4')">MinIO Video Path</a></li>
+            <li><a href="#" onclick="loadVideo('/api/v1/video/feed')">Video Feed API</a></li>
+            <li><a href="#" onclick="loadVideo('https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4')">Sample Video</a></li>
+        </ul>
+    </div>
+
+    <script>
+        const video = document.getElementById('testVideo');
+        const statusDiv = document.getElementById('status');
+        const currentUrlSpan = document.getElementById('currentUrl');
+        const videoStatusSpan = document.getElementById('videoStatus');
+
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function loadVideo(url) {
+            document.getElementById('videoUrl').value = url;
+            testVideo();
+        }
+
+        function testVideo() {
+            const url = document.getElementById('videoUrl').value;
+            if (!url) {
+                showStatus('Please enter a video URL', 'error');
+                return;
+            }
+
+            currentUrlSpan.textContent = url;
+            videoStatusSpan.textContent = 'Loading...';
+            
+            video.src = url;
+            
+            video.onloadstart = () => {
+                videoStatusSpan.textContent = 'Loading...';
+                showStatus('Loading video...', 'info');
+            };
+            
+            video.onloadedmetadata = () => {
+                videoStatusSpan.textContent = 'Loaded';
+                showStatus(`Video loaded successfully! Duration: ${Math.round(video.duration)}s`, 'success');
+            };
+            
+            video.onerror = (e) => {
+                videoStatusSpan.textContent = 'Error';
+                showStatus(`Failed to load video: ${e.target.error?.message || 'Unknown error'}`, 'error');
+            };
+            
+            video.oncanplay = () => {
+                showStatus('Video ready to play', 'success');
+            };
+        }
+
+        async function testAPI() {
+            try {
+                showStatus('Testing API connection...', 'info');
+                
+                const response = await fetch('/api/v1/video/feed');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(`API test successful! Response: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
+                } else {
+                    showStatus(`API test failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`API test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test on page load
+        window.onload = () => {
+            testAPI();
+        };
+    </script>
+</body>
+</html>

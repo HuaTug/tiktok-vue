@@ -240,6 +240,27 @@ export const videoAPI = {
     return api.post('/v1/stream', {
       index: index
     })
+  },
+
+  // Get video stream URL (获取视频流URL)
+  getVideoStreamUrl: (videoPath) => {
+    // 直接返回流式URL，不需要API调用
+    return `/api/v1/stream?path=${encodeURIComponent(videoPath)}`
+  },
+
+  // Get video by path (通过路径获取视频)
+  getVideoByPath: (path) => {
+    return api.get('/v1/stream', {
+      params: { path: path },
+      responseType: 'blob' // 用于视频文件
+    })
+  },
+
+  // Get video info (获取视频信息)
+  getVideoInfo: (videoId) => {
+    return api.get('/v1/video/info', {
+      params: { video_id: videoId }
+    })
   }
 }
 
