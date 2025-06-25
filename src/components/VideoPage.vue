@@ -72,6 +72,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VideoPlayer from './VideoPlayer.vue'
+import { RouterUtils } from '../router/utils.js'
 
 export default {
   name: 'VideoPage',

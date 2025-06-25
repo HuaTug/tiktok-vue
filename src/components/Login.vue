@@ -70,6 +70,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userAPI } from '../api/index.js'
+import { RouterUtils } from '../router/utils.js'
 
 export default {
   name: 'Login',
@@ -176,34 +177,11 @@ export default {
           console.log('Stored user info:', user)
           ElMessage.success('Login successful!')
           
-          // 强制跳转到视频播放页面 - 使用多种方式确保跳转成功
-          try {
-            console.log('Attempting to navigate to video player...')
-            
-            // 方法1: 使用router.push
-            await router.push('/video')
-            console.log('Router.push completed')
-            
-            // 方法2: 如果router.push失败，使用replace
-            setTimeout(() => {
-              if (window.location.pathname !== '/video') {
-                console.log('Router.push may have failed, trying router.replace...')
-                router.replace('/video')
-              }
-            }, 100)
-            
-            // 方法3: 最后的备用方案 - 直接修改location
-            setTimeout(() => {
-              if (window.location.pathname !== '/video') {
-                console.log('Router methods failed, using window.location...')
-                window.location.href = '/video'
-              }
-            }, 500)
-            
-          } catch (routerError) {
-            console.error('Router navigation error:', routerError)
-            // 如果路由跳转失败，直接使用window.location
-            window.location.href = '/video'
+          // 登录成功后跳转
+          const navigationSuccess = await RouterUtils.navigateAfterLogin('/video')
+          if (!navigationSuccess) {
+            console.warn('Navigation failed, but login was successful')
+            ElMessage.warning('Login successful, but page navigation failed. Please refresh the page.')
           }
         } else {
           console.error('Login failed:', errorMessage, 'Response:', response)
