@@ -27,16 +27,21 @@ const router = createRouter({
 // Navigation guard for authentication
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  console.log('Route guard - navigating to:', to.path, 'token exists:', !!token)
+  console.log('Route guard - navigating to:', to.path, 'from:', from.path, 'token exists:', !!token)
   
+  // 如果要去需要认证的页面但没有token
   if (to.meta.requiresAuth && !token) {
     console.log('Route guard - redirecting to login (no token)')
     next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && token) {
+  } 
+  // 如果已经登录但要去登录/注册页面，重定向到dashboard
+  else if ((to.path === '/login' || to.path === '/register') && token) {
     console.log('Route guard - redirecting to dashboard (already logged in)')
     next('/dashboard')
-  } else {
-    console.log('Route guard - allowing navigation')
+  } 
+  // 其他情况允许正常导航
+  else {
+    console.log('Route guard - allowing navigation to:', to.path)
     next()
   }
 })

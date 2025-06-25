@@ -110,50 +110,57 @@ export default {
         const response = await userAPI.loginUser(loginForm)
         console.log('Login response:', response)
         
-        // 修复响应处理逻辑 - 适配多种可能的响应结构
+        // 修复响应处理逻辑 - 根据后端实际响应格式
         let isSuccess = false
         let token = null
         let refreshToken = null
         let user = null
         let errorMessage = 'Login failed'
         
-        // 检查多种可能的成功响应结构
+        // 后端响应格式: { code: 0, message: "success", data: { base: {...}, token: "...", refresh_token: "...", user: {...} } }
         if (response) {
-          // 情况1: 直接返回成功数据
-          if (response.token || response.access_token) {
+          console.log('Response structure:', {
+            hasCode: 'code' in response,
+            code: response.code,
+            hasData: 'data' in response,
+            dataKeys: response.data ? Object.keys(response.data) : 'no data'
+          })
+          
+          // 检查后端的标准响应格式
+          if (response.code === 0 && response.data) {
+            const data = response.data
+            
+            // 检查data中是否有token和user信息
+            if (data.token || data.Token) {
+              isSuccess = true
+              token = data.token || data.Token
+              refreshToken = data.refresh_token || data.RefreshToken || data.refreshToken
+              user = data.user || data.User || { userName: loginForm.userName, email: loginForm.email }
+              console.log('Login success - extracted data:', { token, refreshToken, user })
+            }
+            // 如果data中有base字段，也检查base.code
+            else if (data.base && data.base.code === 0) {
+              isSuccess = true
+              token = data.token || data.Token || 'temp_token_' + Date.now()
+              refreshToken = data.refresh_token || data.RefreshToken || data.refreshToken
+              user = data.user || data.User || { userName: loginForm.userName, email: loginForm.email }
+              console.log('Login success via base.code - extracted data:', { token, refreshToken, user })
+            }
+            else {
+              errorMessage = data.base?.msg || data.message || response.message || 'Login failed'
+            }
+          }
+          // 兼容其他可能的响应格式
+          else if (response.token || response.access_token) {
             isSuccess = true
             token = response.token || response.access_token
             refreshToken = response.RefreshToken || response.refresh_token || response.refreshToken
             user = response.user || response.userInfo || { userName: loginForm.userName, email: loginForm.email }
+            console.log('Login success - direct token:', { token, refreshToken, user })
           }
-          // 情况2: 有base字段的响应结构
-          else if (response.base) {
-            if (response.base.code === 0 || response.base.status === 'success') {
-              isSuccess = true
-              token = response.token || response.data?.token
-              refreshToken = response.RefreshToken || response.data?.RefreshToken
-              user = response.user || response.data?.user || { userName: loginForm.userName, email: loginForm.email }
-            } else {
-              errorMessage = response.base.msg || response.base.message || 'Login failed'
-            }
-          }
-          // 情况3: 有code字段的响应结构
-          else if (response.code !== undefined) {
-            if (response.code === 0 || response.code === 200) {
-              isSuccess = true
-              token = response.token || response.data?.token
-              refreshToken = response.RefreshToken || response.data?.RefreshToken
-              user = response.user || response.data?.user || { userName: loginForm.userName, email: loginForm.email }
-            } else {
-              errorMessage = response.msg || response.message || 'Login failed'
-            }
-          }
-          // 情况4: HTTP状态码成功，但没有明确的成功标识
-          else if (!response.error && !response.err) {
-            isSuccess = true
-            token = response.token || 'temp_token_' + Date.now() // 临时token
-            refreshToken = response.RefreshToken || response.refresh_token
-            user = response.user || { userName: loginForm.userName, email: loginForm.email }
+          else {
+            errorMessage = response.message || response.msg || 'Login failed'
+            console.log('Login failed - error message:', errorMessage)
           }
         }
         
@@ -166,11 +173,38 @@ export default {
           localStorage.setItem('user', JSON.stringify(user))
           
           console.log('Login successful, stored token:', token)
+          console.log('Stored user info:', user)
           ElMessage.success('Login successful!')
           
-          // 确保跳转成功
-          await router.push('/dashboard')
-          console.log('Navigated to dashboard')
+          // 强制跳转到dashboard - 使用多种方式确保跳转成功
+          try {
+            console.log('Attempting to navigate to dashboard...')
+            
+            // 方法1: 使用router.push
+            await router.push('/dashboard')
+            console.log('Router.push completed')
+            
+            // 方法2: 如果router.push失败，使用replace
+            setTimeout(() => {
+              if (window.location.pathname !== '/dashboard') {
+                console.log('Router.push may have failed, trying router.replace...')
+                router.replace('/dashboard')
+              }
+            }, 100)
+            
+            // 方法3: 最后的备用方案 - 直接修改location
+            setTimeout(() => {
+              if (window.location.pathname !== '/dashboard') {
+                console.log('Router methods failed, using window.location...')
+                window.location.href = '/dashboard'
+              }
+            }, 500)
+            
+          } catch (routerError) {
+            console.error('Router navigation error:', routerError)
+            // 如果路由跳转失败，直接使用window.location
+            window.location.href = '/dashboard'
+          }
         } else {
           console.error('Login failed:', errorMessage, 'Response:', response)
           ElMessage.error(errorMessage)
@@ -194,6 +228,8 @@ export default {
         } else if (error.request) {
           // 请求发出但没有收到响应
           errorMessage = 'Network error. Please check your connection.'
+        } else if (error.message) {
+          errorMessage = error.message
         }
         
         ElMessage.error(errorMessage)

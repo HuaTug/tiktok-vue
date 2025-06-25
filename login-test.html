@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #17a2b8; }
+        .warning { color: #ffc107; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #ddd;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Vue Login Fix Verification</h1>
+        <p>This tool helps verify that the login fix is working correctly.</p>
+        
+        <div class="test-section">
+            <h3>📊 Current Status</h3>
+            <div id="status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 Test Actions</h3>
+            <button onclick="testResponseParsing()">Test Response Parsing</button>
+            <button onclick="simulateBackendResponse()">Simulate Backend Response</button>
+            <button onclick="testLocalStorage()">Test LocalStorage</button>
+            <button onclick="clearAll()">Clear All Data</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 Debug Log</h3>
+            <div id="log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔍 Expected vs Actual Response Format</h3>
+            <div>
+                <h4>Expected Backend Response Format:</h4>
+                <pre id="expected-format"></pre>
+                <h4>Test Response Processing:</h4>
+                <pre id="test-processing"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${className}`;
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            const statusDiv = document.getElementById('status');
+            
+            statusDiv.innerHTML = `
+                <p><strong>🔑 Token:</strong> <span class="${token ? 'success' : 'error'}">${token ? 'Present ✓' : 'Not found ✗'}</span></p>
+                <p><strong>👤 User:</strong> <span class="${user ? 'success' : 'error'}">${user ? 'Present ✓' : 'Not found ✗'}</span></p>
+                <p><strong>🌐 Current URL:</strong> ${window.location.href}</p>
+                <p><strong>📍 Current Path:</strong> ${window.location.pathname}</p>
+                ${user ? `<p><strong>👤 User Info:</strong> <pre>${user}</pre></p>` : ''}
+            `;
+        }
+
+        function testResponseParsing() {
+            log('🧪 Testing response parsing logic...', 'info');
+            
+            // Test different response formats
+            const testCases = [
+                {
+                    name: 'Backend Standard Format',
+                    response: {
+                        code: 0,
+                        message: 'success',
+                        data: {
+                            base: { code: 0, msg: 'Login Success' },
+                            token: 'test_token_123',
+                            refresh_token: 'refresh_token_456',
+                            user: { userName: 'testuser', email: 'test@example.com' }
+                        }
+                    }
+                },
+                {
+                    name: 'Direct Token Format',
+                    response: {
+                        token: 'direct_token_789',
+                        RefreshToken: 'direct_refresh_abc',
+                        user: { userName: 'directuser', email: 'direct@example.com' }
+                    }
+                },
+                {
+                    name: 'Base Code Format',
+                    response: {
+                        base: { code: 0, msg: 'Success' },
+                        token: 'base_token_def',
+                        user: { userName: 'baseuser', email: 'base@example.com' }
+                    }
+                }
+            ];
+
+            testCases.forEach(testCase => {
+                log(`Testing: ${testCase.name}`, 'info');
+                const result = parseLoginResponse(testCase.response);
+                log(`Result: ${result.success ? '✅ Success' : '❌ Failed'} - ${result.message}`, result.success ? 'success' : 'error');
+                if (result.success) {
+                    log(`Token: ${result.token}, User: ${JSON.stringify(result.user)}`, 'info');
+                }
+            });
+        }
+
+        function parseLoginResponse(response) {
+            let isSuccess = false;
+            let token = null;
+            let refreshToken = null;
+            let user = null;
+            let errorMessage = 'Login failed';
+
+            if (response) {
+                // 后端标准响应格式
+                if (response.code === 0 && response.data) {
+                    const data = response.data;
+                    if (data.token || data.Token) {
+                        isSuccess = true;
+                        token = data.token || data.Token;
+                        refreshToken = data.refresh_token || data.RefreshToken || data.refreshToken;
+                        user = data.user || data.User;
+                    } else if (data.base && data.base.code === 0) {
+                        isSuccess = true;
+                        token = data.token || data.Token || 'temp_token_' + Date.now();
+                        refreshToken = data.refresh_token || data.RefreshToken || data.refreshToken;
+                        user = data.user || data.User;
+                    }
+                }
+                // 直接返回token格式
+                else if (response.token || response.access_token) {
+                    isSuccess = true;
+                    token = response.token || response.access_token;
+                    refreshToken = response.RefreshToken || response.refresh_token || response.refreshToken;
+                    user = response.user || response.userInfo;
+                }
+                // base字段格式
+                else if (response.base && response.base.code === 0) {
+                    isSuccess = true;
+                    token = response.token || 'temp_token_' + Date.now();
+                    refreshToken = response.RefreshToken || response.refresh_token;
+                    user = response.user;
+                }
+            }
+
+            return {
+                success: isSuccess,
+                token: token,
+                refreshToken: refreshToken,
+                user: user,
+                message: isSuccess ? 'Login successful' : errorMessage
+            };
+        }
+
+        function simulateBackendResponse() {
+            log('🎭 Simulating successful backend response...', 'info');
+            
+            const mockResponse = {
+                code: 0,
+                message: 'success',
+                data: {
+                    base: { code: 0, msg: 'Login Success' },
+                    token: 'mock_jwt_token_' + Date.now(),
+                    refresh_token: 'mock_refresh_token_' + Date.now(),
+                    user: {
+                        userName: 'testuser',
+                        email: 'test@example.com',
+                        user_id: 12345
+                    }
+                }
+            };
+
+            const result = parseLoginResponse(mockResponse);
+            
+            if (result.success) {
+                localStorage.setItem('token', result.token);
+                if (result.refreshToken) {
+                    localStorage.setItem('refreshToken', result.refreshToken);
+                }
+                localStorage.setItem('user', JSON.stringify(result.user));
+                
+                log('✅ Mock login successful!', 'success');
+                log(`Stored token: ${result.token}`, 'success');
+                log(`Stored user: ${JSON.stringify(result.user)}`, 'success');
+                
+                updateStatus();
+                
+                // Test navigation
+                log('🚀 Testing navigation to dashboard...', 'info');
+                setTimeout(() => {
+                    if (confirm('Navigate to dashboard? (This will change the URL)')) {
+                        window.location.href = '/dashboard';
+                    }
+                }, 1000);
+            } else {
+                log('❌ Mock login failed', 'error');
+            }
+        }
+
+        function testLocalStorage() {
+            log('💾 Testing localStorage functionality...', 'info');
+            try {
+                localStorage.setItem('test', 'value');
+                const value = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                log('✅ LocalStorage test: SUCCESS', 'success');
+            } catch (error) {
+                log(`❌ LocalStorage test: FAILED - ${error.message}`, 'error');
+            }
+        }
+
+        function clearAll() {
+            log('🧹 Clearing all stored data...', 'warning');
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            updateStatus();
+            log('✅ All data cleared', 'success');
+        }
+
+        function showExpectedFormat() {
+            const expectedFormat = {
+                "Backend Response": {
+                    "code": 0,
+                    "message": "success", 
+                    "data": {
+                        "base": {
+                            "code": 0,
+                            "msg": "Login Success"
+                        },
+                        "token": "jwt_token_here",
+                        "refresh_token": "refresh_token_here",
+                        "user": {
+                            "userName": "username",
+                            "email": "user@example.com",
+                            "user_id": 123
+                        }
+                    }
+                }
+            };
+            
+            document.getElementById('expected-format').textContent = JSON.stringify(expectedFormat, null, 2);
+        }
+
+        // Initialize
+        updateStatus();
+        showExpectedFormat();
+        log('🚀 Login fix verification tool initialized', 'info');
+        log('ℹ️ This tool simulates the fixed login logic', 'info');
+        
+        // Auto-refresh status every 3 seconds
+        setInterval(updateStatus, 3000);
+    </script>
+</body>
+</html>

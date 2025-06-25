@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Vue Login Debug Tool</h1>
+    
+    <div class="test-section">
+        <h3>Current Status</h3>
+        <div id="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test Actions</h3>
+        <button onclick="testLocalStorage()">Test LocalStorage</button>
+        <button onclick="testRouterNavigation()">Test Router Navigation</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <button onclick="simulateLogin()">Simulate Login</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Debug Log</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            const statusDiv = document.getElementById('status');
+            
+            statusDiv.innerHTML = `
+                <p><strong>Token:</strong> ${token ? 'Present' : 'Not found'}</p>
+                <p><strong>User:</strong> ${user ? 'Present' : 'Not found'}</p>
+                <p><strong>Current URL:</strong> ${window.location.href}</p>
+                <p><strong>Current Path:</strong> ${window.location.pathname}</p>
+            `;
+        }
+
+        function testLocalStorage() {
+            log('Testing localStorage...');
+            try {
+                localStorage.setItem('test', 'value');
+                const value = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                log('LocalStorage test: SUCCESS', 'success');
+            } catch (error) {
+                log(`LocalStorage test: FAILED - ${error.message}`, 'error');
+            }
+        }
+
+        function testRouterNavigation() {
+            log('Testing router navigation...');
+            try {
+                // Test if we can change the URL
+                const originalPath = window.location.pathname;
+                window.history.pushState({}, '', '/test');
+                log(`Navigation test: Changed path from ${originalPath} to ${window.location.pathname}`, 'success');
+                
+                // Restore original path
+                window.history.pushState({}, '', originalPath);
+                log(`Navigation test: Restored path to ${window.location.pathname}`, 'success');
+            } catch (error) {
+                log(`Navigation test: FAILED - ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorage() {
+            log('Clearing localStorage...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            updateStatus();
+            log('Storage cleared', 'success');
+        }
+
+        function simulateLogin() {
+            log('Simulating successful login...');
+            
+            // Simulate login response
+            const mockToken = 'mock_token_' + Date.now();
+            const mockUser = {
+                userName: 'testuser',
+                email: 'test@example.com',
+                user_id: 123
+            };
+            
+            // Store data
+            localStorage.setItem('token', mockToken);
+            localStorage.setItem('user', JSON.stringify(mockUser));
+            
+            log(`Stored token: ${mockToken}`, 'success');
+            log(`Stored user: ${JSON.stringify(mockUser)}`, 'success');
+            
+            updateStatus();
+            
+            // Test navigation
+            log('Attempting navigation to /dashboard...');
+            try {
+                window.location.href = '/dashboard';
+            } catch (error) {
+                log(`Navigation failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        updateStatus();
+        log('Debug tool initialized');
+        
+        // Auto-refresh status every 2 seconds
+        setInterval(updateStatus, 2000);
+    </script>
+</body>
+</html>
