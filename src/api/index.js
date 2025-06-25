@@ -40,36 +40,36 @@ api.interceptors.response.use(
 
 // User API functions - 修正所有API路径和参数格式
 export const userAPI = {
-  // Create user (register) - 修正路径为 /v1/user/create/
+  // Create user (register) - 修正参数名为 username 匹配后端json标签
   createUser: (userData) => {
     return api.post('/v1/user/create/', {
-      user_name: userData.userName,  // 匹配后端 thrift 定义
-      password: userData.password,
-      email: userData.email,
-      sex: userData.sex
+      username: userData.userName,  // ✅ 修正：使用 "username" 匹配后端json标签
+      password: userData.password,  // ✅ 正确
+      email: userData.email,        // ✅ 正确
+      sex: userData.sex             // ✅ 正确
     })
   },
 
-  // Login user - 修正路径为 /v1/user/login，修正参数名
+  // Login user - 修正参数名为 username 匹配后端json标签
   loginUser: (loginData) => {
     return api.post('/v1/user/login', {
-      user_name: loginData.userName,  // 匹配后端 thrift 定义
-      Password: loginData.password,   // 注意大写P，匹配后端 LoginUserResquest 结构
-      Email: loginData.email          // 注意大写E，匹配后端 LoginUserResquest 结构
+      username: loginData.userName,  // ✅ 修正：使用 "username" 匹配后端json标签
+      password: loginData.password,  // ✅ 正确
+      email: loginData.email         // ✅ 正确
     })
   },
 
   // Get user info - 修正路径为 /v1/user/get，使用查询参数
   getUserInfo: (userId) => {
     return api.get('/v1/user/get', {
-      params: { userId: userId }  // 匹配后端 GetUserInfoRequest 结构
+      params: { userId: userId }
     })
   },
 
   // Update user - 修正路径为 /v1/user/update，使用POST方法
   updateUser: (userData) => {
     return api.post('/v1/user/update', {
-      user_name: userData.userName,  // 匹配后端 UpdateUserRequest 结构
+      user_name: userData.userName,
       userId: userData.userId,
       password: userData.password,
       data: userData.data,
@@ -80,14 +80,14 @@ export const userAPI = {
   // Delete user - 修正路径为 /v1/user/delete，使用DELETE方法和查询参数
   deleteUser: (userId) => {
     return api.delete('/v1/user/delete', {
-      params: { userId: userId }  // 匹配后端 DeleteUserRequest 结构
+      params: { userId: userId }
     })
   },
 
   // Query user - 修正路径为 /v1/user/query/，使用POST方法
   queryUser: (params) => {
     return api.post('/v1/user/query/', {
-      Keyword: params.keyword,    // 匹配后端 QueryUserRequest 结构
+      Keyword: params.keyword,
       page: params.page,
       page_size: params.page_size
     })
@@ -96,14 +96,14 @@ export const userAPI = {
   // Send verification code - 修正路径为 /v1/user/sendcode
   sendCode: (email) => {
     return api.post('/v1/user/sendcode', { 
-      email: email  // 匹配后端 SendCodeRequest 结构
+      email: email
     })
   },
 
   // Verify code - 修正路径为 /v1/user/verifycode
   verifyCode: (email, code) => {
     return api.post('/v1/user/verifycode', { 
-      code: code,   // 匹配后端 VerifyCodeRequest 结构
+      code: code,
       email: email
     })
   },
@@ -111,7 +111,7 @@ export const userAPI = {
   // Check user exists by ID - 修正路径为 /v1/user/check
   checkUserExistsById: (userId) => {
     return api.post('/v1/user/check', { 
-      userId: userId  // 匹配后端 CheckUserExistsByIdRequst 结构
+      userId: userId
     })
   }
 }
