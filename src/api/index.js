@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getToken, clearAuth } from '../utils/auth.js'
 
 // Create axios instance
 const api = axios.create({
@@ -12,13 +13,27 @@ const api = axios.create({
 // Request interceptor to add token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
+    console.log('Current token:', token ? token.substring(0, 20) + '...' : 'No token found')
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      // 根据后端JWT中间件的期望格式设置Authorization头
+      config.headers['Access-Token']=token
+      console.log('Access-Token header added:',config.headers['Access-Token'])
+    }else{
+      console.warn('No token found in localStorage')
     }
+
+    console.log('Request config:',{
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+    })
+
     return config
   },
   (error) => {
+    console.error('Request interceptor error:', error)
     return Promise.reject(error)
   }
 )
@@ -35,9 +50,8 @@ api.interceptors.response.use(
     
     // 改进错误处理
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
+      console.log('Token expired or invalid, clearing local storage')
+      clearAuth()
       // 避免在登录页面时重复跳转
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
@@ -69,6 +83,7 @@ export const userAPI = {
 
   // Login user - 修正参数名为 username 匹配后端json标签
   loginUser: (loginData) => {
+    console.log('Sending login request with data:', loginData)
     return api.post('/v1/user/login', {
       username: loginData.userName,  // ✅ 修正：使用 "username" 匹配后端json标签
       password: loginData.password,  // ✅ 正确
@@ -89,8 +104,7 @@ export const userAPI = {
       user_name: userData.userName,
       userId: userData.userId,
       password: userData.password,
-      data: userData.data,
-      filesize: userData.filesize
+      file: userData.data,
     })
   },
 

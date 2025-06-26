@@ -1,4 +1,5 @@
 import router from './index'
+import { clearAuth, isLoggedIn, getUser } from '../utils/auth.js'
 
 /**
  * 路由导航工具类
@@ -54,9 +55,7 @@ export class RouterUtils {
   static async logout() {
     try {
       // 清除本地存储
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
+      clearAuth()
       
       // 跳转到登录页
       await router.replace('/login')
@@ -137,20 +136,14 @@ export class NavigationGuards {
    * 检查用户是否已认证
    */
   static isAuthenticated() {
-    return !!localStorage.getItem('token')
+    return isLoggedIn()
   }
 
   /**
    * 获取用户信息
    */
   static getUserInfo() {
-    try {
-      const userStr = localStorage.getItem('user')
-      return userStr ? JSON.parse(userStr) : null
-    } catch (error) {
-      console.error('Failed to parse user info:', error)
-      return null
-    }
+    return getUser()
   }
 
   /**

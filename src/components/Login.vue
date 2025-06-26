@@ -71,6 +71,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userAPI } from '../api/index.js'
 import { RouterUtils } from '../router/utils.js'
+import { saveAuthData } from '../utils/auth.js'
 
 export default {
   name: 'Login',
@@ -94,12 +95,13 @@ export default {
         { required: true, message: 'Please input password', trigger: 'blur' },
         { min: 6, message: 'Password should be at least 6 characters', trigger: 'blur' }
       ],
-      email: [
+/*      email: [
         { required: true, message: 'Please input email', trigger: 'blur' },
         { type: 'email', message: 'Please input correct email address', trigger: 'blur' }
       ]
+*/  
     }
-    
+
     const handleLogin = async () => {
       try {
         const valid = await loginFormRef.value.validate()
@@ -110,97 +112,53 @@ export default {
         
         const response = await userAPI.loginUser(loginForm)
         console.log('Login response:', response)
-        
-        // 修复响应处理逻辑 - 根据后端实际响应格式
-        let isSuccess = false
+        console.log('Response data: ',response.data.token)
         let token = null
         let refreshToken = null
         let user = null
-        let errorMessage = 'Login failed'
         
-        // 后端响应格式: { code: 0, message: "success", data: { base: {...}, token: "...", refresh_token: "...", user: {...} } }
-        if (response) {
-          console.log('Response structure:', {
-            hasCode: 'code' in response,
-            code: response.code,
-            hasData: 'data' in response,
-            dataKeys: response.data ? Object.keys(response.data) : 'no data'
-          })
+        // 简化响应处理逻辑，根据后端实际响应格式
+        if (response && response.data) {
+          const data = response.data
           
-          // 检查后端的标准响应格式
-          if (response.code === 0 && response.data) {
-            const data = response.data
+          if (data && data.user){
+          // 提取token和用户信息
+          token = data.token || data.Token
+          refreshToken = data.refresh_token || data.RefreshToken
+          user = data.user || data.User || { 
+            userName: loginForm.userName, 
+            email: loginForm.email 
+          }
+          }
+          console.log('Extracted token:', token)
+          if (token) {
+            // 使用认证工具函数保存认证信息
+            saveAuthData({
+              token,
+              refreshToken,
+              user,
+              userName: loginForm.userName,
+              email: loginForm.email
+            })
             
-            // 检查data中是否有Success字段（根据后端日志格式）
-            if (data.Success && data.Success.User) {
-              isSuccess = true
-              // 如果Token为空，生成一个临时token
-              token = data.Success.Token || data.Success.token || `temp_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-              refreshToken = data.Success.RefreshToken || data.Success.refresh_token
-              user = data.Success.User || data.Success.user
-              console.log('Login success via Success field - extracted data:', { token, refreshToken, user })
+            console.log('Login successful, stored token:', token)
+            console.log('Stored user info:', user)
+            ElMessage.success('Login successful!')
+            
+            // 登录成功后跳转
+            const navigationSuccess = await RouterUtils.navigateAfterLogin('/video')
+            if (!navigationSuccess) {
+              console.warn('Navigation failed, but login was successful')
+              ElMessage.warning('Login successful, but page navigation failed. Please refresh the page.')
             }
-            // 检查data中是否有token和user信息
-            else if (data.token || data.Token) {
-              isSuccess = true
-              token = data.token || data.Token
-              refreshToken = data.refresh_token || data.RefreshToken || data.refreshToken
-              user = data.user || data.User || { userName: loginForm.userName, email: loginForm.email }
-              console.log('Login success - extracted data:', { token, refreshToken, user })
-            }
-            // 如果data中有base字段，也检查base.code
-            else if (data.base && data.base.code === 0) {
-              isSuccess = true
-              token = data.token || data.Token || `temp_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-              refreshToken = data.refresh_token || data.RefreshToken || data.refreshToken
-              user = data.user || data.User || { userName: loginForm.userName, email: loginForm.email }
-              console.log('Login success via base.code - extracted data:', { token, refreshToken, user })
-            }
-            else {
-              errorMessage = data.base?.msg || data.message || response.message || 'Login failed'
-            }
-          }
-          // 兼容其他可能的响应格式
-          else if (response.token || response.access_token) {
-            isSuccess = true
-            token = response.token || response.access_token
-            refreshToken = response.RefreshToken || response.refresh_token || response.refreshToken
-            user = response.user || response.userInfo || { userName: loginForm.userName, email: loginForm.email }
-            console.log('Login success - direct token:', { token, refreshToken, user })
-          }
-          // 如果响应中包含"success"消息，也认为是成功的
-          else if (response.message && response.message.toLowerCase().includes('success')) {
-            isSuccess = true
-            token = `temp_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-            user = { userName: loginForm.userName, email: loginForm.email }
-            console.log('Login success via success message - generated token:', { token, user })
-          }
-          else {
-            errorMessage = response.message || response.msg || 'Login failed'
-            console.log('Login failed - error message:', errorMessage)
-          }
-        }
-        
-        if (isSuccess && token) {
-          // Store token and user info
-          localStorage.setItem('token', token)
-          if (refreshToken) {
-            localStorage.setItem('refreshToken', refreshToken)
-          }
-          localStorage.setItem('user', JSON.stringify(user))
-          
-          console.log('Login successful, stored token:', token)
-          console.log('Stored user info:', user)
-          ElMessage.success('Login successful!')
-          
-          // 登录成功后跳转
-          const navigationSuccess = await RouterUtils.navigateAfterLogin('/video')
-          if (!navigationSuccess) {
-            console.warn('Navigation failed, but login was successful')
-            ElMessage.warning('Login successful, but page navigation failed. Please refresh the page.')
+          } else {
+            console.error('Login failed: No token received')
+            ElMessage.error('Login failed: No token received')
           }
         } else {
-          console.error('Login failed:', errorMessage, 'Response:', response)
+          // 处理登录失败
+          const errorMessage = response?.message || response?.data?.base?.msg || 'Login failed'
+          console.error('Login failed:', errorMessage)
           ElMessage.error(errorMessage)
         }
       } catch (error) {

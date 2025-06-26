@@ -147,6 +147,7 @@ export default {
     const profileFormRef = ref()
     const loading = ref(false)
     const user = reactive({})
+    const newAvatarFile = ref(null)
     
     const profileForm = reactive({
       userName: '',
@@ -210,9 +211,11 @@ export default {
     }
     
     const handleAvatarChange = (file) => {
-      // Convert file to base64 for preview
+
+      newAvatarFile.value = file.raw
+
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = (e) =>{
         user.avatar_url = e.target.result
       }
       reader.readAsDataURL(file.raw)
@@ -222,37 +225,46 @@ export default {
       try {
         const valid = await profileFormRef.value.validate()
         if (!valid) return
+
+        const token = localStorage.getItem('token')
+        console.log('Current token:', token ? 'Token exists' : 'No token found')
+        
+        if (!token){
+          ElMessage.error('Authentication required. Please log in again.')
+          router.push('/login')
+          return
+        }
         
         loading.value = true
-        
-        // Prepare update data
-        const updateData = {
-          userName: profileForm.userName,
-          userId: user.user_id,
-          password: profileForm.password || undefined
+
+        const formData = new FormData()
+        formData.append('userName', profileForm.userName)
+        formData.append('userId', user.user_id)
+        if (profileForm.password) {
+          formData.append('password', profileForm.password)
         }
         
-        // If avatar was changed, include it
-        if (user.avatar_url && user.avatar_url.startsWith('data:')) {
-          // Convert base64 to binary data
-          const base64Data = user.avatar_url.split(',')[1]
-          updateData.data = base64Data
-          updateData.filesize = base64Data.length
+        if (newAvatarFile.value) {
+          formData.append('file', newAvatarFile.value)
         }
         
-        const response = await userAPI.updateUser(updateData)
+        const response = await userAPI.updateUser(formData)
         
         if (response.base && response.base.code === 0) {
-          // Update local storage
           const updatedUser = { ...user, user_name: profileForm.userName }
+          
+          if (response.data && response.data.avatar_url) {
+            updatedUser.avatar_url = response.data.avatar_url
+          }
+          
           localStorage.setItem('user', JSON.stringify(updatedUser))
           Object.assign(user, updatedUser)
           
           ElMessage.success('Profile updated successfully!')
           
-          // Clear password fields
           profileForm.password = ''
           profileForm.confirmPassword = ''
+          newAvatarFile.value = null
         } else {
           ElMessage.error(response.base?.msg || 'Update failed')
         }

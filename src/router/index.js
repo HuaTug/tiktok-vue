@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isLoggedIn } from '../utils/auth.js'
 
 // 导入组件
 import Login from '../components/Login.vue'
@@ -6,6 +7,7 @@ import Register from '../components/Register.vue'
 import Profile from '../components/Profile.vue'
 import Dashboard from '../components/Dashboard.vue'
 import VideoPage from '../components/VideoPage.vue'
+import TokenTest from '../components/TokenTest.vue'
 
 // 路由配置
 const routes = [
@@ -69,6 +71,15 @@ const routes = [
     }
   },
   {
+    path: '/token-test',
+    name: 'TokenTest',
+    component: TokenTest,
+    meta: {
+      title: 'Token Test',
+      requiresAuth: false
+    }
+  },
+  {
     // 404 页面
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -92,8 +103,7 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  const isAuthenticated = !!token
+  const isAuthenticated = isLoggedIn()
   
   console.log('Route Guard:', {
     to: to.path,
